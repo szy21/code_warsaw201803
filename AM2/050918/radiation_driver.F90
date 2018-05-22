@@ -160,6 +160,7 @@ use radiation_driver_diag_mod, only: radiation_driver_diag_init, &
                                      update_rad_fields, &
                                      produce_radiation_diagnostics, &
                                      write_solar_interp_restart_nc
+use solar_forcing_mod, only: solar_forcing ! 050518[ZS] Custom module to handle forcing specification
 
 !--------------------------------------------------------------------
 
@@ -384,13 +385,6 @@ character(len=16) :: cosp_precip_sources = '    '
                                ! currently not considered as precip
                                ! sources.
 
-! 052416[ZS]
-logical     :: add_solar_forcing = .false.
-real        :: solar_forcing_mag = 0.0
-real        :: solar_forcing_center = 0.0
-real        :: solar_forcing_width = 0.0
-real        :: solar_forcing_sf = 1.0
-
 ! <NAMELIST NAME="radiation_driver_nml">
 !  <DATA NAME="rad_time_step" UNITS="" TYPE="integer" DIM="" DEFAULT="14400">
 !The radiative time step in seconds.
@@ -515,9 +509,7 @@ namelist /radiation_driver_nml/ do_radiation, &
                                 lat_for_solar_input, lon_for_solar_input, &
                                 rad_time_step, sw_rad_time_step, use_single_lw_sw_ts, &
                                 nonzero_rad_flux_init, &
-                                cosp_precip_sources, &
-                                add_solar_forcing, & ! 052416[ZS]: add solar forcing parameters
-                                solar_forcing_mag, solar_forcing_center, solar_forcing_width, solar_forcing_sf
+                                cosp_precip_sources
 !---------------------------------------------------------------------
 !---- public data ----
 
@@ -706,8 +698,10 @@ integer                :: vers ! version number of the restart file being read
 !          extinction    SW extinction (band 4 centered on 1 micron) for volcanoes
 
 type(rad_output_type),save          ::  Rad_output
-!ZS
+!-- 050518[ZS]
 real, allocatable, dimension(:,:)   ::  cosz_ann, solar_ann, fracday_ann
+real, allocatable, dimension(:,:,:)   ::  global_solar_forcing
+!-- 050518[ZS]
 real    :: rrsun_ann
 
 !-----------------------------------------------------------------------
@@ -922,9 +916,10 @@ type(radiation_flux_type),   intent(inout) :: Rad_flux(:)
       integer           ::   ico2
 
       character(len=16) ::  cosp_precip_sources_modified
-! ZS
-      real, allocatable, dimension(:,:)   ::  lat
-      integer           :: j
+!++ 050518[ZS]
+      real, allocatable, dimension(:,:)   ::  lon,lat
+      integer           :: i,j
+!-- 050518[ZS]
 
 !---------------------------------------------------------------------
 !   local variables
@@ -1170,18 +1165,22 @@ type(radiation_flux_type),   intent(inout) :: Rad_flux(:)
                        ' solar radiation', FATAL)
      endif
 
-!++ZS
-     if (add_solar_forcing) then
-       allocate (cosz_ann (id,jd))
-       allocate (solar_ann (id,jd))
-       allocate (fracday_ann (id,jd))
-       allocate (lat (id,jd))
-       do j = 1,jd
-         lat(:,j) = 0.5*(latb(:,j)+latb(:,j+1))
-       enddo
-       call annual_mean_solar (1, jd, lat, cosz_ann, solar_ann, fracday_ann, rrsun_ann)
-     endif
-!--ZS
+!++ 050518[ZS]
+     allocate (cosz_ann (id,jd))
+     allocate (solar_ann (id,jd))
+     allocate (fracday_ann (id,jd))
+     allocate (lon (id,jd))
+     allocate (lat (id,jd))
+     do i = 1,id
+       lon(i,:) = 0.5*(lonb(i,:)+lonb(i+1,:))
+     enddo
+     do j = 1,jd
+       lat(:,j) = 0.5*(latb(:,j)+latb(:,j+1))
+     enddo
+     call annual_mean_solar (1, jd, lat, cosz_ann, solar_ann, fracday_ann, rrsun_ann)
+     allocate (global_solar_forcing (id,jd,12))
+     call solar_forcing(lonb, latb, lon, lat, global_solar_forcing)
+!-- 050518[ZS]
 
 !----------------------------------------------------------------------
 !    store the controls for hires cloudy coszen calculations.
@@ -1904,9 +1903,10 @@ real, dimension(:),       pointer :: gavg_rrv
 real, dimension(:,:,:),   pointer :: t, p_full, p_half, z_full, z_half, q
 real, dimension(:,:,:,:), pointer :: r, rm
 
-! 052416[ZS]: perturb solar radiation
-real, dimension(ie-is+1,je-js+1)    :: solar_forcing, scaled_solar_forcing
-real  :: c_solar_forcing, solar_forcing_center_rad
+!++ 050918[ZS]: add solar forcing
+real, dimension(ie-is+1,je-js+1)    :: local_solar_forcing
+integer :: yr, mo, dum
+!-- 050918[ZS]   
                 
 !-------------------------------------------------------------------
 !   local variables:
@@ -2106,16 +2106,9 @@ real  :: c_solar_forcing, solar_forcing_center_rad
 !    tive fluxes and heating rates.
 !---------------------------------------------------------------------
       call mpp_clock_begin (calc_clock)
-      !++ZS: add asymmetric forcing [052416]
-      if (add_solar_forcing) then
-         solar_forcing_center_rad = solar_forcing_center * PI / 180.0
-         c_solar_forcing = solar_forcing_width * PI / (2.0 * 180.0 * sqrt(2.0 * log(100.0)))
-         solar_forcing(:,:) =  exp(-(lat(:,:) - solar_forcing_center_rad)**2 / (2.0 * (c_solar_forcing**2)))
-         scaled_solar_forcing(:,:) = solar_forcing / solar_ann(:,js:je) * solar_forcing_mag * (1/solar_forcing_sf)
-      else
-         scaled_solar_forcing(:,:) = 0
-      endif
-      !--ZS
+      ! 050918[ZS]: add solar forcing
+      call get_date(Time,yr,mo,dum,dum,dum,dum,dum)
+      local_solar_forcing(:,:) = global_solar_forcing(is:ie,js:je,mo) / solar_ann(is:ie,js:je)
       if (do_rad) then
         call radiation_calc (is, ie, js, je, lat, lon, &
                              Atmos_input%press, Atmos_input%pflux,  &
@@ -2130,7 +2123,7 @@ real  :: c_solar_forcing, solar_forcing_center_rad
                              crndlw, cmxolw, emrndlw, emmxolw, &
                              camtsw, cldsctsw, cldextsw, cldasymmsw, &
                              Rad_output, Lw_output, Sw_output, Lw_diagnostics,&
-                             scaled_solar_forcing)  ! 052416[ZS]
+                             local_solar_forcing)  ! 052416[ZS]
       endif
       call mpp_clock_end (calc_clock)
 

@@ -2122,8 +2122,8 @@ real  :: c_solar_forcing1, solar_forcing_center1_rad, &
          solar_forcing_center2_rad = solar_forcing_center2 * PI / 180.0
          c_solar_forcing2 = solar_forcing_width2 * PI / (2.0 * 180.0 * sqrt(2.0 * log(100.0)))
          solar_forcing2(:,:) =  exp(-(lat(:,:) - solar_forcing_center2_rad)**2 / (2.0 * (c_solar_forcing2**2)))
-         scaled_solar_forcing(:,:) = solar_forcing1 / solar_ann(:,js:je) * solar_forcing_mag1 * (1/solar_forcing_sf1) + &
-                                     solar_forcing2 / solar_ann(:,js:je) * solar_forcing_mag2 * (1/solar_forcing_sf2)
+         scaled_solar_forcing(:,:) = solar_forcing1 / solar_ann(is:ie,js:je) * solar_forcing_mag1 * (1/solar_forcing_sf1) + &
+                                     solar_forcing2 / solar_ann(is:ie,js:je) * solar_forcing_mag2 * (1/solar_forcing_sf2)
       else
          scaled_solar_forcing(:,:) = 0
       endif

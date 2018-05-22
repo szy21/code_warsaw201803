@@ -658,7 +658,7 @@ real, dimension(:,:),            intent(in)    :: local_solar_forcing ! 052416[Z
                                    aerozero, aerozero, aerozero, &
                                    Rad_control%do_totcld_forcing, &
                                    flag_stoch, Sw_output(Aerosolrad_control%indx_swaf),&
-                                   local_solar_forcing)
+                                   local_solar_forcing) ! [ZS]
             else
               call swresf_wrapper (Rad_control%nzens, &
                                    press, pflux, temp, rh2o, deltaz,  &
@@ -669,7 +669,7 @@ real, dimension(:,:),            intent(in)    :: local_solar_forcing ! 052416[Z
                                    aeroasymfac, aerosctopdep, aeroextopdep, &
                                    Rad_control%do_totcld_forcing, &
                                    flag_stoch, Sw_output(Aerosolrad_control%indx_swaf),&
-                                   local_solar_forcing)
+                                   local_solar_forcing) ! [ZS]
             endif
 
           endif ! do_swaerosol_forcing
@@ -687,7 +687,7 @@ real, dimension(:,:),            intent(in)    :: local_solar_forcing ! 052416[Z
                                  aeroasymfac, aerosctopdep, aeroextopdep, &
                                  Rad_control%do_totcld_forcing, &
                                  flag_stoch, Sw_output(1), &
-                                 local_solar_forcing)
+                                 local_solar_forcing) ! [ZS]
           else
             aerozero = 0.0
             call swresf_wrapper (Rad_control%nzens, &
@@ -699,7 +699,7 @@ real, dimension(:,:),            intent(in)    :: local_solar_forcing ! 052416[Z
                                  aerozero, aerozero, aerozero, &
                                  Rad_control%do_totcld_forcing, &
                                  flag_stoch, Sw_output(1), &
-                                 local_solar_forcing)
+                                 local_solar_forcing) ! [ZS]
           endif
        !endif
 
@@ -1043,7 +1043,7 @@ real,dimension(:,:,:,:),    intent(in)    :: aeroasymfac, aerosctopdep, aeroexto
 logical,                    intent(in)    :: do_totcld_forcing
 integer,                    intent(in)    :: flag_stoch
 type(sw_output_type),       intent(inout) :: Sw_output
-real, dimension(:,:),       intent(in)    :: local_solar_forcing
+real, dimension(:,:),       intent(in)    :: local_solar_forcing ! [ZS]
 
 real, dimension(size(Astro%cosz,1), &
                 size(Astro%cosz,2), &

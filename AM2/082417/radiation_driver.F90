@@ -388,15 +388,15 @@ character(len=16) :: cosp_precip_sources = '    '
 logical     :: add_solar_forcing = .false.
 real        :: solar_forcing_mag1 = 0.0
 real        :: solar_forcing_center_lat1 = 0.0
-real        :: solar_forcing_width_lat1 = 0.0
+real        :: solar_forcing_width_lat1 = 30.0
 real        :: solar_forcing_center_lon1 = 0.0
-real        :: solar_forcing_width_lon1 = 0.0
+real        :: solar_forcing_width_lon1 = 30.0
 real        :: solar_forcing_sf1 = 1.0
 real        :: solar_forcing_mag2 = 0.0
 real        :: solar_forcing_center_lat2 = 0.0
-real        :: solar_forcing_width_lat2 = 0.0
+real        :: solar_forcing_width_lat2 = 30.0
 real        :: solar_forcing_center_lon2 = 0.0
-real        :: solar_forcing_width_lon2 = 0.0
+real        :: solar_forcing_width_lon2 = 30.0
 real        :: solar_forcing_sf2 = 1.0
 
 ! <NAMELIST NAME="radiation_driver_nml">
@@ -2132,8 +2132,8 @@ real  :: c_solar_forcing_lat1, c_solar_forcing_lon1, solar_forcing_center_lat1_r
          c_solar_forcing_lon2 = solar_forcing_width_lon2 * PI / (2.0 * 180.0 * sqrt(2.0 * log(100.0)))
          solar_forcing2(:,:) =  exp(-(lat(:,:) - solar_forcing_center_lat2_rad)**2 / (2.0 * (c_solar_forcing_lat2**2))) * &
                                exp(-(lon(:,:) - solar_forcing_center_lon2_rad)**2 / (2.0 * (c_solar_forcing_lon2**2)))
-         scaled_solar_forcing(:,:) = solar_forcing1 / solar_ann(:,js:je) * solar_forcing_mag1 * (1/solar_forcing_sf1) + &
-                                     solar_forcing2 / solar_ann(:,js:je) * solar_forcing_mag2 * (1/solar_forcing_sf2)
+         scaled_solar_forcing(:,:) = solar_forcing1 / solar_ann(is:ie,js:je) * solar_forcing_mag1 * (1/solar_forcing_sf1) + &
+                                     solar_forcing2 / solar_ann(is:ie,js:je) * solar_forcing_mag2 * (1/solar_forcing_sf2)
       else
          scaled_solar_forcing(:,:) = 0
       endif
